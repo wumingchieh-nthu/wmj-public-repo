@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>澤蜃 / 澤水花 (Paludispectrum mirabilis) - 新古近紀沼澤物種原型系統</title>
+    <!-- CDN Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-deep: #050b0e;
+            --bg-card: rgba(8, 22, 28, 0.82);
+            --bg-card-border: rgba(32, 178, 170, 0.3);
+            --neon-cyan: #00f3ff;
+            --neon-blue: #0ea5e9;
+            --neon-pink: #f43f5e;
+            --neon-purple: #c084fc;
+            --neon-orange: #fb923c;
+            --swamp-teal: #14b8a6;
+            --symbio-green: #34d399;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --font-display: 'Chakra Petch', sans-serif;
+            --font-body: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at 80% 20%, rgba(52, 211, 153, 0.1) 0%, transparent 60%),
+                        radial-gradient(circle at 10% 80%, rgba(192, 132, 252, 0.08) 0%, transparent 50%),
+                        linear-gradient(180deg, #03080a 0%, #061318 50%, #020608 100%);
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(5, 11, 14, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--bg-card-border);
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .brand-logo { display: flex; align-items: center; gap: 12px; }
+
+        .brand-logo .pulse-beacon {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: var(--symbio-green);
+            box-shadow: 0 0 12px var(--symbio-green);
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 20px var(--neon-purple); }
+        }
+
+        .brand-title h1 {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .brand-title span.taxon {
+            font-size: 0.85rem;
+            color: var(--symbio-green);
+            font-family: var(--font-mono);
+            font-weight: 400;
+        }
+
+        nav.nav-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .nav-btn {
+            background: rgba(20, 184, 166, 0.12);
+            border: 1px solid rgba(20, 184, 166, 0.35);
+            color: var(--text-muted);
+            padding: 7px 15px;
+            border-radius: 6px;
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--swamp-teal);
+            color: #04090c;
+            border-color: var(--neon-cyan);
+            font-weight: 600;
+            box-shadow: 0 0 14px rgba(20, 184, 166, 0.5);
+        }
+
+        .container { max-width: 1560px; margin: 0 auto; padding: 1.5rem; }
+
+        .tab-content { display: none; animation: fadeIn 0.35s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1100px) { .sim-grid { grid-template-columns: 1fr; } }
+
+        .canvas-card {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .canvas-toolbar {
+            background: rgba(4, 10, 14, 0.92);
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--bg-card-border);
+            font-family: var(--font-display);
+            font-size: 0.88rem;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .canvas-toolbar .sim-status { display: flex; align-items: center; gap: 8px; color: var(--neon-cyan); }
+
+        #p5-container {
+            width: 100%;
+            height: 640px;
+            min-height: 520px;
+            background: #02070a;
+            position: relative;
+            cursor: crosshair;
+        }
+
+        #p5-container canvas { display: block; }
+
+        .sidebar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .section-header {
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .section-header h3 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: var(--neon-cyan);
+            letter-spacing: 1px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 0.6rem; }
+
+        .btn-action {
+            background: rgba(14, 165, 233, 0.15);
+            border: 1px solid var(--neon-blue);
+            color: #fff;
+            padding: 9px 14px;
+            border-radius: 6px;
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-action.stage-active {
+            background: var(--symbio-green);
+            border-color: var(--symbio-green);
+            color: #04120c;
+            font-weight: 700;
+            box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+        }
+
+        .btn-action.pulse-btn { background: rgba(244, 63, 94, 0.18); border-color: var(--neon-pink); color: #fecdd3; }
+        .btn-action.pulse-btn:hover { background: var(--neon-pink); color: #fff; box-shadow: 0 0 20px rgba(244, 63, 94, 0.6); }
+        .btn-action.pet-btn { background: rgba(251, 146, 60, 0.18); border-color: var(--neon-orange); color: #ffedd5; }
+        .btn-action.pet-btn:hover { background: var(--neon-orange); color: #000; box-shadow: 0 0 16px rgba(251, 146, 60, 0.5); }
+        .btn-action.storm-btn { background: rgba(192, 132, 252, 0.16); border-color: var(--neon-purple); color: #e9d5ff; }
+        .btn-action.storm-btn:hover { background: var(--neon-purple); color: #10041c; box-shadow: 0 0 18px rgba(192, 132, 252, 0.55); }
+
+        .control-slider { display: flex; flex-direction: column; gap: 4px; }
+        .control-slider label { font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+        .control-slider input[type=range] { accent-color: var(--neon-cyan); background: #0f232b; height: 6px; border-radius: 3px; }
+
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .telemetry-box {
+            background: rgba(4, 12, 16, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .telemetry-box .label { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-display); }
+        .telemetry-box .value { font-size: 1.05rem; font-family: var(--font-mono); color: var(--symbio-green); font-weight: 600; }
+        .telemetry-box .value.danger { color: var(--neon-pink); }
+
+        .three-viewer-container { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; }
+        @media (max-width: 1000px) { .three-viewer-container { grid-template-columns: 1fr; } }
+
+        #threejs-container {
+            width: 100%;
+            height: 660px;
+            background: radial-gradient(circle at center, #07171d 0%, #03080b 100%);
+            border-radius: 12px;
+            border: 1px solid var(--bg-card-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewer-watermark {
+            position: absolute;
+            bottom: 16px; left: 18px;
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.4);
+            pointer-events: none;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .feature-card:hover { transform: translateY(-3px); border-color: var(--neon-cyan); }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--swamp-teal);
+        }
+
+        .feature-card.pink::before { background: var(--neon-pink); }
+        .feature-card.purple::before { background: var(--neon-purple); }
+        .feature-card.orange::before { background: var(--neon-orange); }
+        .feature-card.green::before { background: var(--symbio-green); }
+
+        .feature-card h4 {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            color: #ffffff;
+            margin-bottom: 0.6rem;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        }
+
+        .feature-card h4 .badge {
+            font-size: 0.75rem;
+            background: rgba(20, 184, 166, 0.2);
+            color: var(--neon-cyan);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+
+        .feature-card p { font-size: 0.92rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+
+        .science-source {
+            font-size: 0.78rem;
+            color: var(--swamp-teal);
+            font-family: var(--font-mono);
+            border-top: 1px dashed rgba(255,255,255,0.1);
+            padding-top: 0.5rem;
+        }
+
+        .code-box-container {
+            background: #03080b;
+            border: 1px solid var(--bg-card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .code-header {
+            background: rgba(14, 28, 36, 0.85);
+            padding: 0.75rem 1.25rem;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            flex-wrap: wrap; gap: 8px;
+        }
+
+        .code-header span { font-family: var(--font-mono); font-size: 0.88rem; color: var(--neon-cyan); }
+
+        pre.code-block {
+            padding: 1.25rem;
+            font-family: var(--font-mono);
+            font-size: 0.84rem;
+            color: #cbd5e1;
+            overflow-x: auto;
+            max-height: 480px;
+            line-height: 1.55;
+            background: #020608;
+        }
+
+        .render-banner {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--bg-card-border);
+            margin-bottom: 1.5rem;
+            position: relative;
+            background: #000;
+        }
+
+        .render-banner img {
+            width: 100%; height: auto; display: block;
+            object-fit: cover;
+            max-height: 440px;
+        }
+
+        .render-banner .banner-caption {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(2,6,8,0.92) 100%);
+            padding: 1.5rem 2rem 1rem 2rem;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            flex-wrap: wrap; gap: 12px;
+        }
+
+        .pill-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            background: rgba(255,255,255,0.08);
+            color: var(--neon-cyan);
+        }
+
+        .lifecycle-flow {
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+            font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);
+            background: rgba(4,12,16,0.7); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 8px; padding: 10px 12px;
+        }
+        .lifecycle-flow b { color: var(--symbio-green); font-weight: 600; }
+        .lifecycle-flow .arrow { color: var(--neon-purple); }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="brand-logo">
+            <div class="pulse-beacon"></div>
+            <div class="brand-title">
+                <h1>澤蜃 / 澤水花 <span class="taxon">Paludispectrum mirabilis</span></h1>
+            </div>
+        </div>
+        <nav class="nav-tabs">
+            <button class="nav-btn active" onclick="switchTab('sim-tab')">🎮 p5.js 生態模擬</button>
+            <button class="nav-btn" onclick="switchTab('three-tab')">🧬 3D 原型檢測</button>
+            <button class="nav-btn" onclick="switchTab('blender-tab')">⚙️ Blender 建模工坊</button>
+            <button class="nav-btn" onclick="switchTab('dossier-tab')">📜 幻想物種設定書</button>
+        </nav>
+    </header>
+
+    <div class="container">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: p5.js Ecosystem Simulation          -->
+        <!-- ========================================== -->
+        <div id="sim-tab" class="tab-content active">
+            <div class="sim-grid">
+                <div class="canvas-card">
+                    <div class="canvas-toolbar">
+                        <div class="sim-status">
+                            <span class="pill-tag">亞熱帶沿海沼澤・人類消失後 5,000 年</span>
+                            <span id="state-indicator" style="color: var(--neon-cyan); font-weight: 600;">狀態: 成體鱟相・底棲爬行 (Benthic)</span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">
+                            左鍵：投放微粒 | 右鍵：誘發噴流逃逸
+                        </div>
+                    </div>
+                    <div id="p5-container"></div>
+                </div>
+
+                <div class="sidebar-card">
+                    <div class="section-header"><h3>🧬 世代交替：切換生活史型態</h3></div>
+                    <div class="control-group">
+                        <button id="btn-stage-adult" class="btn-action stage-active" onclick="setStage('ADULT')">
+                            <span>🛡️ 成體鱟相（底棲・化學合成）</span>
+                        </button>
+                        <button id="btn-stage-medusa" class="btn-action" onclick="setStage('MEDUSA')">
+                            <span>🌸 幼體水母相「澤水花」（浮游）</span>
+                        </button>
+                        <button id="btn-stage-polyp" class="btn-action" onclick="setStage('POLYP')">
+                            <span>🍄 螅肉體（固著・無性生殖）</span>
+                        </button>
+                        <button class="btn-action" onclick="releaseStrobilation()">
+                            <span>✨ 橫裂節生：釋放水母型幼體 (x6)</span>
+                        </button>
+                    </div>
+
+                    <div class="section-header"><h3>⚡ 交互刺激與環境事件</h3></div>
+                    <div class="control-group">
+                        <button class="btn-action pulse-btn" onclick="triggerJetPulse()">
+                            <span>💥 誘發水母噴流逃逸 (Jet Pulse)</span>
+                        </button>
+                        <button class="btn-action pet-btn" onclick="feedPlasticWaste(6)">
+                            <span>🧪 投放古代 PET 塑膠微粒 (x6)</span>
+                        </button>
+                        <button class="btn-action" onclick="feedBacteriaColony(4)">
+                            <span>🦠 釋放化學合成菌落 (x4)</span>
+                        </button>
+                        <button class="btn-action storm-btn" onclick="triggerTyphoon()">
+                            <span>🌀 超強颱風湧浪警報 (Storm Surge)</span>
+                        </button>
+                        <button id="btn-burrow" class="btn-action" onclick="toggleBurrow()">
+                            <span>⬇️ 潛入沉積層縫隙避風 (Burrow)</span>
+                        </button>
+                    </div>
+
+                    <div class="section-header"><h3>📊 生態即時監測儀</h3></div>
+                    <div class="telemetry-grid">
+                        <div class="telemetry-box">
+                            <div class="label">心率 / 脈衝頻率</div>
+                            <div class="value" id="stat-pulse">36 BPM</div>
+                        </div>
+                        <div class="telemetry-box">
+                            <div class="label">化學合成 ATP 產出</div>
+                            <div class="value" id="stat-atp">1.00x</div>
+                        </div>
+                        <div class="telemetry-box">
+                            <div class="label">幾丁質甲殼硬化度</div>
+                            <div class="value" id="stat-chitin">100 %</div>
+                        </div>
+                        <div class="telemetry-box">
+                            <div class="label">累計攝取化學有機質</div>
+                            <div class="value" id="stat-eaten">0 μg</div>
+                        </div>
+                        <div class="telemetry-box">
+                            <div class="label">棲息深度 / 垂直位置</div>
+                            <div class="value" id="stat-depth">底層 0.0 m</div>
+                        </div>
+                        <div class="telemetry-box">
+                            <div class="label">存活個體 / 天敵壓力</div>
+                            <div class="value" id="stat-pop">1 / 低</div>
+                        </div>
+                    </div>
+
+                    <div class="section-header"><h3>🎛️ 環境物理參數</h3></div>
+                    <div class="control-slider">
+                        <label>水流 / 潮汐流速: <span id="val-flow">1.0x</span></label>
+                        <input type="range" id="slider-flow" min="0.2" max="3.0" step="0.1" value="1.0" oninput="updateParams()">
+                    </div>
+                    <div class="control-slider">
+                        <label>化學發光強度: <span id="val-glow">1.2x</span></label>
+                        <input type="range" id="slider-glow" min="0.4" max="2.5" step="0.1" value="1.2" oninput="updateParams()">
+                    </div>
+                    <div class="control-slider">
+                        <label>移動速度: <span id="val-speed">1.8</span></label>
+                        <input type="range" id="slider-speed" min="0.8" max="4.0" step="0.2" value="1.8" oninput="updateParams()">
+                    </div>
+                    <div class="control-slider">
+                        <label>水體懸浮微粒數: <span id="val-particles">120</span></label>
+                        <input type="range" id="slider-particles" min="40" max="240" step="10" value="120" oninput="updateParams()">
+                    </div>
+
+                    <div class="lifecycle-flow">
+                        <b>受精卵</b><span class="arrow">→</span>
+                        <b>螅肉體(Polyp)</b><span class="arrow">─橫裂節生→</span>
+                        <b>澤水花(Medusa)</b><span class="arrow">─沉降變態→</span>
+                        <b>澤蜃(成體)</b><span class="arrow">─潮汐釋卵→</span>受精卵
+                    </div>
+
+                    <button class="btn-action" style="font-size: 0.82rem;" onclick="resetSimulation()">
+                        🔄 重置生態環境與位置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: 3D Prototype Viewer (Three.js)      -->
+        <!-- ========================================== -->
+        <div id="three-tab" class="tab-content">
+            <div class="three-viewer-container">
+                <div id="threejs-container">
+                    <div class="viewer-watermark">澤蜃 / 澤水花 3D 結構原型 (glTF 2.0 ← Blender 程序化生成)</div>
+                </div>
+
+                <div class="sidebar-card">
+                    <div class="section-header"><h3>🔬 3D 觀察視角</h3></div>
+                    <div class="control-group">
+                        <button class="btn-action" onclick="setCameraView('dorsal')"><span>🛡️ 成體・背面甲殼視角</span></button>
+                        <button class="btn-action" onclick="setCameraView('ventral')"><span>🦵 成體・腹面步足與書鰓</span></button>
+                        <button class="btn-action" onclick="setCameraView('lateral')"><span>📐 成體・側面沉降姿態</span></button>
+                        <button class="btn-action" onclick="setCameraView('medusa')"><span>🌸 幼體・澤水花傘蓋特寫</span></button>
+                        <button class="btn-action" onclick="setCameraView('ecosystem')"><span>🌊 生態全景（成體＋幼體）</span></button>
+                    </div>
+
+                    <div class="section-header"><h3>🎨 材質層面解構</h3></div>
+                    <div class="control-group">
+                        <button class="btn-action" onclick="toggleMaterialMode('default')"><span>💎 幾丁質＋化學合成螢光 (PBR)</span></button>
+                        <button class="btn-action" onclick="toggleMaterialMode('wireframe')"><span>🕸️ 幾何多邊形拓撲 (Wireframe)</span></button>
+                    </div>
+
+                    <div class="section-header"><h3>📁 本地檔案狀態</h3></div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+                        <p>✅ <code style="color:var(--neon-cyan)">zeshen.blend</code> — Blender 完整工程</p>
+                        <p>✅ <code style="color:var(--neon-cyan)">zeshen.glb</code> — glTF 2.0 模型（成體＋幼體＋沼澤場景）</p>
+                        <p>✅ <code style="color:var(--neon-cyan)">preview.png</code> — EEVEE 渲染預覽</p>
+                        <p>✅ <code style="color:var(--neon-cyan)">generate_zeshen.py</code> — 程序化建模腳本</p>
+                        <p style="margin-top: 6px; color: var(--swamp-teal);">實體路徑：<br><code>C:\Users\jacky\Limulomedusa_Project\</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: Blender Pipeline                    -->
+        <!-- ========================================== -->
+        <div id="blender-tab" class="tab-content">
+            <div class="render-banner">
+                <img src="preview.png" alt="Blender EEVEE 渲染截圖" onerror="this.style.display='none'">
+                <div class="banner-caption">
+                    <div>
+                        <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: #fff;">Blender 5.2 程序化生成：澤蜃 + 澤水花</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">半球幾丁質穹頂背甲、化學合成腺孔、蜃光縫線、花冠狀水母傘蓋與放射血管</p>
+                    </div>
+                    <button class="btn-action" onclick="downloadBlenderScript()">📥 下載 generate_zeshen.py</button>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h4>馬蹄形幾丁質背甲 <span class="badge">Dome + Solidify</span></h4>
+                    <p>以 UV 半球穹頂為基底，切除下半球並對後緣做馬蹄形凹口與延展，呈現貼伏於沉積層的低平盾甲。Solidify 薄殼化模擬外骨骼厚度，Noise 節點疊加沉積層微蝕刻斑紋。</p>
+                    <div class="science-source">PBR: Transmission 0.28 | IOR 1.52 | Fresnel 化學螢光縫邊</div>
+                </div>
+                <div class="feature-card green">
+                    <h4>化學合成腺孔共生群落 <span class="badge">Emission 9.0</span></h4>
+                    <p>背甲邊緣 7 對、腹節各 2 個共 28 顆發光腺孔，內含類深海管蟲的化學合成微生物群，將塑膠凝膠層與重金屬沉積物的化學梯度直接轉化為 ATP。中央「蜃光縫線」則是化學梯度感應帶。</p>
+                    <div class="science-source">Symbiosis: Chemosynthetic Microbiome (480~520nm 綠光)</div>
+                </div>
+                <div class="feature-card pink">
+                    <h4>澤水花：花冠狀傘蓋 <span class="badge">8-Petal Bell</span></h4>
+                    <p>幼體水母相的傘蓋以 8 瓣正弦調制參數網格構成花冠形邊緣，內部貫穿 8 條放射血管（蜃光縫線材質），傘緣環列 8 個感覺體，下垂 16 條呈三維擾動的刺絲胞觸手。</p>
+                    <div class="science-source">Parametric: r = R·sin(v·π/2)^0.85 · (1 + 0.16·sin8θ)</div>
+                </div>
+                <div class="feature-card purple">
+                    <h4>沉降變態的世代交替場景 <span class="badge">Dual-Form Scene</span></h4>
+                    <p>同一場景並置底棲成體與浮游幼體：沉積層以 Noise 起伏並散布「塑膠凝膠化石 (Plastiglomerate)」團塊與半淹沒的玻璃陶瓷廢墟，完整呈現設定書中「幼體棲息冠層、成體沉入廢墟底部」的垂直分層。</p>
+                    <div class="science-source">Scene: Sediment + Plastiglomerate + Glass Ruins</div>
+                </div>
+            </div>
+
+            <div class="code-box-container">
+                <div class="code-header">
+                    <span>📄 generate_zeshen.py（Blender 5.2+ / 4.x 自動建模腳本）</span>
+                    <button class="btn-action" style="padding: 4px 12px; font-size: 0.8rem;" onclick="copyScriptCode()">📋 複製摘要代碼</button>
+                </div>
+                <pre class="code-block" id="script-code-display"># Paludispectrum mirabilis (澤蜃 / 澤水花) Procedural Generator
+# 完整腳本請見同目錄的 generate_zeshen.py（約 850 行）
+# 執行：blender --background --python generate_zeshen.py
+
+# --- 核心建模流程 ---
+def build_carapace(shell_mat, seam_mat, symbiont_mat, origin):
+    """半球穹頂 -> 切除下半球 -> 後緣馬蹄凹口 -> Solidify 薄殼"""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=1.0)
+    # bmesh 刪除 z &lt; 0 的下半球頂點
+    # 後半 (y &lt; 0) 拉長 1.22 並依 y 壓低穹頂
+    # 後緣中央 |x| &lt; 0.85 處凹陷 0.35 -> 馬蹄鐵開口
+    v.co = (x * 2.75, y * 2.55, z * 1.12)
+    # 追加：中央蜃光縫線 (Bezier)、7 對化學合成腺孔、2 側眼
+
+def build_medusa_bell(bell_mat, seam_mat, center, scale):
+    """8 瓣花冠傘蓋：r = R·sin(v·π/2)^0.85 · (1+0.16·sin8θ·v^2.5)
+       + 口腕 + 8 條放射血管 + 8 個傘緣感覺體"""
+    ...
+
+def build_adult_abdomen / build_adult_telson / build_adult_legs / build_adult_frills
+    # 5 節腹節（帶側刺）、針狀劍尾 + 發光神經索、5 對貝塞尔曲線步足、4 片書鰓
+
+def build_environment(sediment_mat, glass_mat, symbiont_mat)
+    # 沉積層起伏地表 + 5 塊玻璃陶瓷廢墟 + 9 塊塑膠凝膠化石
+
+# --- 輸出 ---
+bpy.ops.wm.save_as_mainfile(filepath="zeshen.blend")
+bpy.ops.export_scene.gltf(filepath="zeshen.glb", export_format='GLB')
+bpy.ops.render.render(write_still=True)   # -> preview.png</pre>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: Species Dossier (設定書)            -->
+        <!-- ========================================== -->
+        <div id="dossier-tab" class="tab-content">
+            <div class="card-grid">
+                <div class="feature-card">
+                    <h4>1. 年代：人類消失 5,000 年後 <span class="badge">Era</span></h4>
+                    <p>• <b>氣候</b>：大氣 CO2 達全新平衡，全球均溫上升 1.5 ~ 2°C，極地冰川部分融化。<br>
+                    • <b>地形</b>：海平面上升數公尺，亞熱帶沿海平原全面退縮，轉化為廣袤沼澤與扩张的三角洲；都市遺跡已被數公尺厚的沉積物與森林土壤徹底覆蓋。<br>
+                    • <b>殘留人造物</b>：鋼筋混凝土已於 100~300 年內風化坍塌為泥沙層；金屬多數腐蝕殆盡；僅存玻璃、鈦、陶瓷與地底的塑膠化石層（Plastiglomerate）。沼澤底部的矽膠與石化聚合物已轉化為特殊的「化石凝膠基質」。</p>
+                    <div class="science-source">設定書 §1 年代 / 地形與氣候變遷 / 殘留人造物演變</div>
+                </div>
+
+                <div class="feature-card pink">
+                    <h4>2. 環境：高溫高濕的毒沼 <span class="badge">Environment</span></h4>
+                    <p>• <b>溫度與光照</b>：年均溫 22 ~ 36°C，極少霜凍；陽光充沛但受高頻熱對流雷雨與蒸散作用影響，長期籠罩於高濕雲霧。<br>
+                    • <b>水與化學</b>：降雨極其豐富、水質微酸；深層沉積物富含古代都市塑膠化學廢料、重金屬微粒浸出物與高濃度海洋毒素。<br>
+                    • <b>最大生存危險</b>：超強颱風湧浪、缺乏陸地避難所的高潮位淹沒，以及水體中化學毒素的動態聚積。</p>
+                    <div class="science-source">設定書 §2 環境 / 溫度光照 / 水空氣化學狀態 / 最大生存危險</div>
+                </div>
+
+                <div class="feature-card purple">
+                    <h4>3. 生存：完全化學合成的食性 <span class="badge">Survival</span></h4>
+                    <p>• <b>幼體（水母相）</b>：濾食水體中以 PET 塑膠化石與重金屬沉積物進行化學合成的菌類（如演化後的 <i>Ideonella sakaiensis</i> 菌群）。<br>
+                    • <b>成體（鱟相）</b>：深居沉積層、完全不依賴日光，靠體內寄生的化學合成微生物（類似深海管蟲機制）將塑膠凝膠層與重金屬沉積物的化學梯度直接轉化為 ATP。<br>
+                    • <b>天敵</b>：幼體易被紅樹林冠層與半淹沒廢墟中的大型掠食性魚類、兩棲類吞食；螅肉體會被底棲刮食性無脊椎動物破壞。<br>
+                    • <b>致命弱點</b>：颱風湧浪若將成體沖上缺乏化學底質的高地會導致乾燥或能量枯竭；菌群大規模死亡造成的化學梯度匱乏亦為致命威脅。</p>
+                    <div class="science-source">設定書 §3 生存 / 能量來源 / 食物鏈位置 / 致命弱點</div>
+                </div>
+
+                <div class="feature-card orange">
+                    <h4>4. 棲息：垂直分層與獨居策略 <span class="badge">Habitat</span></h4>
+                    <p>• <b>幼年（水母相）</b>：棲息於紅樹林沼澤水體、沼澤冠層與半淹沒的陶瓷玻璃建築結構之間。<br>
+                    • <b>成體（鱟相）</b>：褪去軟體傘蓋並凝結出幾丁質硬殼後，沉入底層半淹沒的陶瓷玻璃廢墟與塑膠凝膠化石層底部，避開地表強烈颱風。<br>
+                    • <b>社群策略</b>：水母相與螅肉相群居／爆發性聚合，以數量優勢抵禦掠食並穩定基因擴散；成體轉為獨居，各自佔據強毒性沼澤隙縫與底質，避免分解養分的劇烈競爭。<br>
+                    • <b>活動節律</b>：成體終年於無光深層沉積隙縫活動，無晝夜差別；幼體隨潮汐與光照微幅垂直移動。季節性潮汐高峰期，成體會短暫爬行至潮間帶邊緣集體繁殖釋放。</p>
+                    <div class="science-source">設定書 §4 棲息 / 垂直分層 / 社群策略 / 晝夜活動與遷移</div>
+                </div>
+
+                <div class="feature-card green">
+                    <h4>5. 繁殖：r-策略世代交替 <span class="badge">Reproduction</span></h4>
+                    <p>• <b>成體釋放</b>：成年底棲鱟相於季節性潮汐高峰期釋放數百萬顆受精卵。<br>
+                    • <b>固著無性複製</b>：受精卵發育為固著於陶瓷玻璃廢墟表面的「螅肉體（Polyp）」，養分與氣候穩定時透過<b>橫裂節生（Strobilation）</b>大量複製。<br>
+                    • <b>浮游水母相</b>：螅肉體釋出數以萬計的「澤水花」幼體，以數量優勢在廣袤沼澤中迅速擴散。<br>
+                    • <b>沉降變態</b>：倖存的水母相幼體成熟後褪去傘蓋，凝結出能抵抗強酸與高鹽度的幾丁質甲殼，沉入底層化身鱟相成體。<br>
+                    • <b>週期與變異</b>：約 1~2 年完成一個完整世代循環；無性生殖期基因高度一致，但高毒性化學環境誘發極高的適應性微變異（如對新型聚合物分解酵素的適應率），能快速搶占新開闢的廢墟棲位。</p>
+                    <div class="science-source">設定書 §5 繁殖 / 世代交替 / 生命週期 / 後代特徵與變異性</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script: Tab Switching & UI Bridge -->
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            try { history.replaceState(null, '', '?tab=' + tabId.replace('-tab', '')); } catch (e) { /* file:// 相容性 */ }
+
+            const btns = document.querySelectorAll('.nav-btn');
+            if (tabId === 'sim-tab') btns[0].classList.add('active');
+            if (tabId === 'three-tab') {
+                btns[1].classList.add('active');
+                if (window.initThreeOnce) window.initThreeOnce();
+            }
+            if (tabId === 'blender-tab') btns[2].classList.add('active');
+            if (tabId === 'dossier-tab') btns[3].classList.add('active');
+        }
+
+        function copyScriptCode() {
+            const code = document.getElementById('script-code-display').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ 摘要代碼已複製至剪貼簿！完整腳本請下載 generate_zeshen.py');
+            }).catch(() => alert('請手動選取代碼複製。'));
+        }
+
+        function downloadBlenderScript() { window.location.href = 'generate_zeshen.py'; }
+
+        // 開啟時依 ?tab=sim/three/blender/dossier 切換分頁
+        window.addEventListener('DOMContentLoaded', () => {
+            const t = new URLSearchParams(location.search).get('tab');
+            if (t && document.getElementById(t + '-tab')) switchTab(t + '-tab');
+        });
+
+        // ===== p5.js 模擬器的 UI 橋接函式 =====
+        function setStage(s) {
+            if (window.__zeshen) window.__zeshen.setStage(s);
+            ['adult', 'medusa', 'polyp'].forEach(k => {
+                const b = document.getElementById('btn-stage-' + k);
+                if (b) b.classList.remove('stage-active');
+            });
+            const map = { ADULT: 'adult', MEDUSA: 'medusa', POLYP: 'polyp' };
+            const active = document.getElementById('btn-stage-' + map[s]);
+            if (active) active.classList.add('stage-active');
+        }
+        function releaseStrobilation() { if (window.__zeshen) window.__zeshen.strobilation(); }
+        function triggerJetPulse() { if (window.__zeshen) window.__zeshen.jetPulse(); }
+        function feedPlasticWaste(n) { if (window.__zeshen) window.__zeshen.feed('PET', n); }
+        function feedBacteriaColony(n) { if (window.__zeshen) window.__zeshen.feed('BACT', n); }
+        function triggerTyphoon() { if (window.__zeshen) window.__zeshen.typhoon(); }
+        function toggleBurrow() {
+            if (window.__zeshen) {
+                const buried = window.__zeshen.burrow();
+                const b = document.getElementById('btn-burrow');
+                if (b) b.classList.toggle('stage-active', buried);
+            }
+        }
+        function resetSimulation() { if (window.__zeshen) window.__zeshen.reset(); }
+
+        function updateParams() {
+            const g = id => document.getElementById(id);
+            const flow = parseFloat(g('slider-flow').value);
+            const glow = parseFloat(g('slider-glow').value);
+            const speed = parseFloat(g('slider-speed').value);
+            const part = parseInt(g('slider-particles').value);
+            g('val-flow').innerText = flow.toFixed(1) + 'x';
+            g('val-glow').innerText = glow.toFixed(1) + 'x';
+            g('val-speed').innerText = speed.toFixed(1);
+            g('val-particles').innerText = part;
+            if (window.__zeshen) window.__zeshen.setParams({ flow, glow, speed, particles: part });
+        }
+    </script>
+
+    <!-- ======================================================== -->
+    <!-- p5.js 生態模擬引擎（世代交替 × 沼澤沉積層）              -->
+    <!-- ======================================================== -->
+    <script>
+    (function () {
+        if (typeof p5 === 'undefined') {
+            document.getElementById('p5-container').innerHTML =
+                '<div style="color:#f43f5e;padding:2rem;text-align:center;">p5.js 未能自 CDN 載入，請確認網路連線。</div>';
+            return;
+        }
+
+        // ---------- 共用狀態 ----------
+        const S = {
+            stage: 'ADULT',            // ADULT | MEDUSA | POLYP
+            flow: 1.0, glow: 1.2, speed: 1.8, particleTarget: 120,
+            storm: 0,                  // 颱風強度 0~1
+            eaten: 0,
+            predation: 0
+        };
+        let P = null;                  // p5 實例
+        let adult, polyp, medusae = [], fish = [], particles = [], foods = [], shards = [], lumps = [];
+        let waterY = 0;                // 水面 y（像素）
+        let sedimentY = 0;             // 沉積層表面 y
+
+        // ---------- 環境碎片（玻璃/陶瓷廢墟與塑膠凝膠化石） ----------
+        function buildScenery(w, h) {
+            shards = [];
+            lumps = [];
+            for (let i = 0; i < 6; i++) {
+                shards.push({
+                    x: (i + 0.5) / 6 * w + P.random(-30, 30),
+                    y: sedimentY - P.random(20, 90),
+                    w: P.random(30, 85),
+                    h: P.random(40, 120),
+                    rot: P.random(-0.4, 0.4)
+                });
+            }
+            for (let i = 0; i < 8; i++) {
+                lumps.push({
+                    x: P.random(0, w),
+                    y: sedimentY + P.random(15, h - sedimentY - 15),
+                    r: P.random(14, 42),
+                    ph: P.random(0, 6.28)
+                });
+            }
+        }
+
+        // ---------- 懸浮微粒 ----------
+        class Mote {
+            constructor(w, h, initial) { this.reset(w, h, initial); }
+            reset(w, h, initial) {
+                this.x = P.random(w);
+                this.y = initial ? P.random(waterY + 10, sedimentY) : P.random(waterY + 5, waterY + 40);
+                this.vx = P.random(-0.3, 0.3);
+                this.vy = P.random(-0.25, 0.05);
+                this.size = P.random(1.2, 3);
+                this.plastic = P.random() < 0.35;
+            }
+            update(w, h, flow, storm) {
+                const f = flow * (1 + storm * 2.5);
+                this.x += (this.vx + Math.sin((this.y + P.frameCount * 3) * 0.01) * 0.25) * f;
+                this.y += (this.vy - storm * 0.8) * f;
+                if (this.y < waterY + 2 || this.x < -10 || this.x > w + 10 || this.y > sedimentY) this.reset(w, h, false);
+            }
+            draw() {
+                P.noStroke();
+                if (this.plastic) {
+                    P.fill(251, 146, 60, 190);
+                    P.rect(this.x, this.y, this.size * 1.8, this.size * 1.2);
+                } else {
+                    P.fill(45, 212, 153, 120);
+                    P.circle(this.x, this.y, this.size);
+                }
+            }
+        }
+
+        // ---------- 食物團（PET / 化學合成菌落） ----------
+        class Food {
+            constructor(x, y, type) { this.x = x; this.y = y; this.type = type; this.ph = P.random(6.28); this.life = 900; }
+            update(flow, storm) {
+                this.ph += 0.07;
+                this.life--;
+                this.x += Math.sin(this.ph * 0.4) * 0.15 * flow;
+                this.y += (Math.cos(this.ph * 0.3) * 0.1 - storm * 0.6) * flow;
+            }
+            draw(glow) {
+                const pu = Math.sin(this.ph) * 3;
+                P.push();
+                P.translate(this.x, this.y);
+                P.noStroke();
+                if (this.type === 'PET') {
+                    P.fill(251, 146, 60, 55 + 30 * glow);
+                    P.circle(0, 0, 26 + pu);
+                    P.fill(251, 146, 60, 210);
+                    P.stroke(251, 146, 60, 230); P.strokeWeight(1.2);
+                    P.rect(-5, -5, 10, 10);
+                } else {
+                    P.noStroke();
+                    P.fill(52, 211, 153, 50 + 30 * glow);
+                    P.circle(0, 0, 28 + pu);
+                    P.fill(16, 185, 129, 220);
+                    P.circle(-3, -2, 5); P.circle(3, -1, 4); P.circle(0, 3, 4.5);
+                }
+                P.pop();
+            }
+        }
+
+        // ---------- 觸手（Verlet 鏈） ----------
+        class TentacleChain {
+            constructor(rootAngle, len, segs) {
+                this.off = rootAngle; this.segLen = len; this.n = segs;
+                this.nodes = [];
+                for (let i = 0; i < segs; i++) this.nodes.push({ x: 0, y: 0, ox: 0, oy: 0 });
+            }
+            update(rx, ry, vx, vy, flow, storm, contracted) {
+                // 首幀直接吸附到根部，避免節點從 (0,0) 被拉出長線
+                if (!this.inited) {
+                    for (const nd of this.nodes) { nd.x = rx; nd.y = ry; nd.ox = rx; nd.oy = ry; }
+                    this.inited = true;
+                }
+                this.nodes[0].x = rx; this.nodes[0].y = ry;
+                this.nodes[0].ox = rx; this.nodes[0].oy = ry;
+                const drag = contracted ? 0.8 : 0.93;
+                for (let i = 1; i < this.n; i++) {
+                    const nd = this.nodes[i];
+                    let dx = (nd.x - nd.ox) * drag;
+                    let dy = (nd.y - nd.oy) * drag;
+                    nd.ox = nd.x; nd.oy = nd.y;
+                    nd.x += dx + Math.sin(P.frameCount * 0.05 + i * 0.6 + this.off * 3) * (0.25 + storm * 1.2) * flow - vx * 0.25;
+                    nd.y += dy + 0.22 + storm * 0.7 - vy * 0.25;
+                    if (contracted) nd.y -= 0.7;   // 噴流收縮
+                }
+                for (let it = 0; it < 3; it++) {
+                    for (let i = 0; i < this.n - 1; i++) {
+                        const a = this.nodes[i], b = this.nodes[i + 1];
+                        const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+                        const target = this.segLen * (contracted ? 0.72 : 1);
+                        const diff = (d - target) / d * 0.5;
+                        const ox = (b.x - a.x) * diff, oy = (b.y - a.y) * diff;
+                        if (i !== 0) { a.x += ox; a.y += oy; }
+                        b.x -= ox; b.y -= oy;
+                    }
+                }
+            }
+            draw(glow) {
+                P.noFill();
+                P.stroke(232, 168, 255, 200);
+                P.strokeWeight(1.6);
+                P.beginShape();
+                for (const nd of this.nodes) P.vertex(nd.x, nd.y);
+                P.endShape();
+                P.noStroke();
+                P.fill(244, 63, 94, 150 + 100 * glow);
+                for (let i = 2; i < this.n; i += 3) P.circle(this.nodes[i].x, this.nodes[i].y, 3);
+            }
+        }
+
+        // ---------- 成體鱟相：澤蜃 ----------
+        class Adult {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.vx = 0; this.vy = 0;
+                this.angle = -Math.PI / 2; this.legs = 0; this.glowPh = P.random(6.28);
+                this.buried = false; this.health = 100; this.size = 76;
+            }
+            update(w, h, foodList, storm) {
+                this.glowPh += 0.05;
+                // 被掩埋：直接從沉積層化學梯度獲能
+                if (this.buried) {
+                    this.vx *= 0.8; this.vy *= 0.8;
+                    this.x += Math.sin(P.frameCount * 0.01) * 0.15;
+                    this.health = Math.min(100, this.health + 0.05);
+                } else {
+                    // 趨化性覓食：朝最近的食物轉向
+                    let best = null, bd = 340;
+                    for (const f of foodList) {
+                        const d = Math.hypot(f.x - this.x, f.y - this.y);
+                        if (d < bd) { bd = d; best = f; }
+                    }
+                    if (best) {
+                        const want = Math.atan2(best.y - this.y, best.x - this.x);
+                        let diff = want - this.angle;
+                        while (diff > Math.PI) diff -= 6.283;
+                        while (diff < -Math.PI) diff += 6.283;
+                        this.angle += diff * 0.06;
+                        if (bd < 46) {
+                            const idx = foodList.indexOf(best);
+                            if (idx >= 0) foodList.splice(idx, 1);
+                            S.eaten += best.type === 'PET' ? 25 : 12;
+                        }
+                    } else {
+                        this.angle += Math.sin(P.frameCount * 0.012) * 0.02;
+                    }
+                    // 牆壁避障
+                    if (this.x < 70) this.angle += 0.05;
+                    if (this.x > w - 70) this.angle -= 0.05;
+                    if (this.y > sedimentY - 25) this.angle -= 0.03;
+                    if (this.y < waterY + 60) this.angle += 0.03;
+
+                    const thrust = S.speed * 0.34;
+                    this.vx += Math.cos(this.angle) * thrust;
+                    this.vy += Math.sin(this.angle) * thrust;
+                    this.vx *= 0.86; this.vy *= 0.86;
+                    this.legs += 0.14 * S.speed;
+                    // 貼底約束
+                    this.y = P.constrain(this.y, waterY + 50, sedimentY + 12);
+                    // 颱風：未掩埋則受創並被推擠
+                    if (storm > 0.05) {
+                        this.health -= storm * 0.09;
+                        this.vx += Math.sin(P.frameCount * 0.07) * storm * 1.6;
+                        this.vy -= storm * 0.25;
+                    }
+                }
+                this.x = P.constrain(this.x + this.vx, 50, w - 50);
+                this.y = P.constrain(this.y + this.vy, waterY + 45, sedimentY + 14);
+                this.health = P.constrain(this.health, 0, 100);
+                if (this.health <= 0) {   // 能量枯竭 -> 重新沉降變態為幼體
+                    this.health = 100;
+                    this.x = w / 2; this.y = sedimentY - 60;
+                    medusae.push(new Medusa(this.x, this.y - 60));
+                }
+            }
+            draw(glow) {
+                P.push();
+                P.translate(this.x, this.y);
+                P.rotate(this.angle + Math.PI / 2);
+
+                // 掩埋狀態：半透明並下沉
+                if (this.buried) P.tint(255, 130);
+
+                // 步足（5 對）
+                P.stroke(32, 178, 170, 190);
+                P.strokeWeight(2.2);
+                for (let i = 0; i < 5; i++) {
+                    const yOff = -6 + i * 9;
+                    const swing = Math.sin(i * 0.9 + this.legs) * 7;
+                    for (const side of [-1, 1]) {
+                        P.noFill();
+                        P.beginShape();
+                        P.vertex(side * 11, yOff);
+                        P.vertex(side * 28, yOff + swing * 0.5);
+                        P.vertex(side * 39, yOff + 10 + swing);
+                        P.endShape();
+                    }
+                }
+                // 書鰓薄片（波浪）
+                P.noStroke();
+                for (let i = 0; i < 4; i++) {
+                    const yPos = 16 + i * 8;
+                    const wave = Math.sin(P.frameCount * 0.05 + i * 0.8) * 4;
+                    P.fill(168, 85, 247, 105);
+                    P.ellipse(0, yPos, 46 - i * 6 + wave, 9);
+                }
+                // 腹節（5 節 + 側刺）
+                for (let i = 0; i < 5; i++) {
+                    const yTop = 14 + i * 10;
+                    const wTop = 34 - i * 5, wBot = 29 - i * 5;
+                    P.fill(10, 48, 50, 235);
+                    P.stroke(32, 178, 170, 200);
+                    P.strokeWeight(1.4);
+                    P.beginShape();
+                    P.vertex(-wTop, yTop); P.vertex(wTop, yTop);
+                    P.vertex(wTop + 8, yTop + 7); P.vertex(wBot, yTop + 11);
+                    P.vertex(-wBot, yTop + 11); P.vertex(-wTop - 8, yTop + 7);
+                    P.endShape(P.CLOSE);
+                }
+                // 劍尾 + 發光神經索
+                const tailSwing = Math.sin(P.frameCount * 0.02 + this.legs) * 4;
+                P.stroke(32, 178, 170, 190); P.strokeWeight(3.4);
+                P.line(0, 62, tailSwing, 62 + this.size * 1.5);
+                P.stroke(0, 243, 255, 150 + 100 * glow); P.strokeWeight(1.5);
+                P.line(0, 62, tailSwing, 62 + this.size * 1.5);
+
+                // 背甲（馬蹄形穹頂）
+                P.noStroke();
+                P.fill(16, 84, 80, 250);
+                P.stroke(52, 211, 153, 160);
+                P.strokeWeight(1.8);
+                P.beginShape();
+                for (let i = 0; i <= 34; i++) {
+                    const th = P.PI + (i / 34) * P.PI;
+                    P.vertex(Math.cos(th) * this.size * 1.06, Math.sin(th) * this.size * 0.92);
+                }
+                P.vertex(this.size * 1.1, 12);
+                P.vertex(this.size * 0.5, 18);
+                P.vertex(0, 12);
+                P.vertex(-this.size * 0.5, 18);
+                P.vertex(-this.size * 1.1, 12);
+                P.endShape(P.CLOSE);
+
+                // 背甲蜃光縫線
+                P.stroke(0, 243, 255, 120 + 130 * glow);
+                P.strokeWeight(1.6);
+                P.line(0, -this.size * 0.86, 0, 10);
+
+                // 化學合成腺孔（7 對）
+                P.noStroke();
+                for (let i = 0; i < 7; i++) {
+                    const th = P.PI + ((i + 1) / 8) * P.PI;
+                    const px = Math.cos(th) * this.size * 1.02;
+                    const py = Math.sin(th) * this.size * 0.88;
+                    const pulse = 3 + Math.sin(this.glowPh + i * 0.5) * 1.4;
+                    P.fill(52, 211, 153, 60 * glow);
+                    P.circle(px, py, 12 + pulse * glow);
+                    P.fill(167, 243, 208, 235);
+                    P.circle(px, py, 4);
+                }
+                // 側眼
+                P.fill(52, 211, 153, 230);
+                P.ellipse(-this.size * 0.6, -this.size * 0.42, 6, 10);
+                P.ellipse(this.size * 0.6, -this.size * 0.42, 6, 10);
+
+                P.noTint();
+                P.pop();
+
+                // 掩埋時的沉積層覆蓋
+                if (this.buried) {
+                    P.noStroke();
+                    P.fill(6, 22, 22, 220);
+                    P.rect(this.x - 60, this.y + 6, 120, sedimentY - this.y + 30);
+                }
+            }
+        }
+
+        // ---------- 幼體水母相：澤水花 ----------
+        class Medusa {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.vx = 0; this.vy = 0;
+                this.r = P.random(15, 24); this.pulseCd = 0; this.glowPh = P.random(6.28);
+                this.dead = false; this.alpha = 255;
+                this.tents = [];
+                const n = 8;
+                for (let i = 0; i < n; i++) {
+                    this.tents.push(new TentacleChain((i / n - 0.5) * 2.2, this.r * 0.42, 7));
+                }
+            }
+            pulse() {
+                if (this.pulseCd > 0) return;
+                this.vy -= 5.5;
+                this.vx += P.random(-1.5, 1.5);
+                this.pulseCd = 42;
+                this.glowPh += 2;
+            }
+            update(w, h, foodList, storm, predators) {
+                this.glowPh += 0.06;
+                if (this.pulseCd > 0) this.pulseCd--;
+                // 自然垂直移動（隨潮汐與光照）
+                this.vy += Math.sin(P.frameCount * 0.01 + this.x * 0.01) * 0.03;
+                // 噴流推進（週期性）
+                if (P.frameCount % 90 === 0 && P.random() < 0.4) this.pulse();
+                // 趨化濾食
+                let best = null, bd = 150;
+                for (const f of foodList) {
+                    const d = Math.hypot(f.x - this.x, f.y - this.y);
+                    if (d < bd) { bd = d; best = f; }
+                }
+                if (best) {
+                    best.x += (this.x - best.x) * 0.03;
+                    best.y += (this.y + this.r * 0.6 - best.y) * 0.03;
+                    if (bd < this.r * 0.9) {
+                        const idx = foodList.indexOf(best);
+                        if (idx >= 0) foodList.splice(idx, 1);
+                        S.eaten += best.type === 'PET' ? 18 : 9;
+                        this.glowPh += 1.2;
+                    }
+                }
+                // 流場
+                this.vx += Math.sin(this.y * 0.02 + P.frameCount * 0.02) * 0.04 * S.flow;
+                this.vy -= 0.012;                       // 浮力
+                this.vx += P.random(-0.05, 0.05);
+                if (storm > 0.05) {
+                    this.vx += Math.sin(P.frameCount * 0.09) * storm * 2.2;
+                    this.vy -= storm * 0.5;
+                }
+                this.vx *= 0.93; this.vy *= 0.9;
+                this.x = P.constrain(this.x + this.vx, 12, w - 12);
+                this.y = P.constrain(this.y + this.vy, waterY + 14, sedimentY - 6);
+                // 天敵：掠食性魚類
+                for (const fs of predators) {
+                    if (this.dead) break;
+                    if (Math.hypot(fs.x - this.x, fs.y - this.y) < 22) {
+                        this.dead = true;
+                        S.predation++;
+                    }
+                }
+                if (this.dead) this.alpha -= 6;
+                // 觸手
+                const contracted = this.pulseCd > 30;
+                for (const t of this.tents) {
+                    const rx = this.x + Math.cos(t.off) * this.r * 0.9;
+                    const ry = this.y + Math.sin(t.off) * this.r * 0.25 + this.r * 0.55;
+                    t.update(rx, ry, this.vx, this.vy, S.flow, storm, contracted);
+                }
+            }
+            draw(glow) {
+                P.push();
+                P.translate(this.x, this.y);
+                // 收縮脈動
+                const squeeze = this.pulseCd > 30 ? 1.25 : 1 + Math.sin(this.glowPh) * 0.06;
+                const r = this.r;
+                // 觸手（先畫在傘蓋後方）
+                P.pop();
+                for (const t of this.tents) t.draw(glow);
+
+                P.push();
+                P.translate(this.x, this.y);
+                P.noStroke();
+                // 花冠傘蓋（8 瓣）
+                P.fill(196, 132, 252, 90 * (this.alpha / 255));
+                P.beginShape();
+                for (let i = 0; i <= 64; i++) {
+                    const th = (i / 64) * P.TWO_PI;
+                    const rr = r * (1 + 0.14 * Math.sin(8 * th)) * squeeze;
+                    P.vertex(Math.cos(th) * rr, Math.sin(th) * rr * 0.72);
+                }
+                P.endShape(P.CLOSE);
+                // 內傘
+                P.fill(233, 213, 255, 120 * (this.alpha / 255));
+                P.circle(0, 0, r * 1.25 / squeeze);
+                // 放射血管（8 條）
+                P.stroke(240, 171, 255, 150 + 80 * glow);
+                P.strokeWeight(1.2);
+                for (let i = 0; i < 8; i++) {
+                    const th = (i / 8) * P.TWO_PI;
+                    P.line(0, 0, Math.cos(th) * r * squeeze, Math.sin(th) * r * 0.72 * squeeze);
+                }
+                // 傘緣感覺體
+                P.noStroke();
+                for (let i = 0; i < 8; i++) {
+                    const th = ((i + 0.5) / 8) * P.TWO_PI;
+                    P.fill(255, 255, 255, 200);
+                    P.circle(Math.cos(th) * r * 1.1, Math.sin(th) * r * 0.78, 3.5);
+                }
+                // 口腕
+                P.fill(216, 180, 254, 150);
+                P.ellipse(0, r * 0.5, r * 0.5, r * 0.7);
+                P.pop();
+            }
+        }
+
+        // ---------- 螅肉體（Polyp）----------
+        class Polyp {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.ph = P.random(6.28);
+                this.tents = [];
+                for (let i = 0; i < 6; i++) this.tents.push(new TentacleChain((i - 2.5) * 0.4, 6.5, 5));
+            }
+            update(foodList, storm) {
+                this.ph += 0.05;
+                // 固著濾食
+                let best = null, bd = 90;
+                for (const f of foodList) {
+                    const d = Math.hypot(f.x - this.x, f.y - (this.y - 22));
+                    if (d < bd) { bd = d; best = f; }
+                }
+                if (best && bd < 22) {
+                    const idx = foodList.indexOf(best);
+                    if (idx >= 0) foodList.splice(idx, 1);
+                    S.eaten += 6;
+                }
+                for (const t of this.tents) {
+                    t.update(this.x, this.y - 20, 0, 0, S.flow * 0.6, storm, false);
+                }
+            }
+            draw(glow) {
+                // 固著柄
+                P.stroke(126, 34, 206, 220);
+                P.strokeWeight(5);
+                P.line(this.x, this.y, this.x, this.y - 20);
+                P.noStroke();
+                P.fill(192, 132, 252, 200);
+                P.circle(this.x, this.y - 20, 9);
+                for (const t of this.tents) t.draw(glow * 0.7);
+                // 橫裂節生盤（頂端齒狀）
+                P.fill(255, 255, 255, 120 + 90 * Math.abs(Math.sin(this.ph)));
+                P.rect(this.x - 7, this.y - 28, 14, 4);
+            }
+        }
+
+        // ---------- 掠食性魚類 ----------
+        class Predator {
+            constructor(w, h) {
+                this.x = P.random(w); this.y = P.random(waterY + 40, sedimentY - 120);
+                this.size = P.random(15, 24); this.ph = P.random(6.28);
+            }
+            update(w, h, targets, storm) {
+                this.ph += 0.06;
+                let best = null, bd = 260;
+                for (const m of targets) {
+                    if (m.dead) continue;
+                    const d = Math.hypot(m.x - this.x, m.y - this.y);
+                    if (d < bd) { bd = d; best = m; }
+                }
+                if (best) {
+                    this.x += (best.x - this.x) * 0.02 * S.speed;
+                    this.y += (best.y - this.y) * 0.02 * S.speed;
+                } else {
+                    this.x += Math.cos(this.ph) * 0.7;
+                    this.y += Math.sin(this.ph * 0.7) * 0.4;
+                }
+                if (storm > 0.1) this.x += Math.sin(this.ph * 3) * storm * 2;
+                this.x = P.constrain(this.x, 10, w - 10);
+                this.y = P.constrain(this.y, waterY + 20, sedimentY - 15);
+            }
+            draw() {
+                P.push();
+                P.translate(this.x, this.y);
+                P.noStroke();
+                P.fill(70, 90, 100, 210);
+                P.beginShape();
+                P.vertex(this.size, 0);
+                P.vertex(0, this.size * 0.42);
+                P.vertex(-this.size, 0);
+                P.vertex(0, -this.size * 0.42);
+                P.endShape(P.CLOSE);
+                P.fill(70, 90, 100, 210);
+                P.beginShape();
+                P.vertex(-this.size * 0.8, 0);
+                P.vertex(-this.size * 1.5, -this.size * 0.4);
+                P.vertex(-this.size * 1.5, this.size * 0.4);
+                P.endShape(P.CLOSE);
+                P.fill(244, 63, 94, 230);
+                P.circle(this.size * 0.6, -this.size * 0.08, 3);
+                P.pop();
+            }
+        }
+
+        // ---------- p5 主體 ----------
+        const sketch = (p) => {
+            p.setup = function () {
+                const box = document.getElementById('p5-container');
+                const cv = p.createCanvas(box.clientWidth, box.clientHeight);
+                cv.parent('p5-container');
+                cv.elt.addEventListener('contextmenu', e => e.preventDefault());
+                p.textFont('monospace');
+                waterY = p.height * 0.14;
+                sedimentY = p.height * 0.76;
+                buildScenery(p.width, p.height);
+                adult = new Adult(p.width * 0.42, sedimentY - 24);
+                polyp = new Polyp(p.width * 0.62, sedimentY - 6);
+                for (let i = 0; i < 3; i++) fish.push(new Predator(p.width, p.height));
+                for (let i = 0; i < S.particleTarget; i++) particles.push(new Mote(p.width, p.height, true));
+                for (let i = 0; i < 5; i++) {
+                    foods.push(new Food(P.random(60, p.width - 60), P.random(waterY + 60, sedimentY - 30), P.random() < 0.5 ? 'PET' : 'BACT'));
+                }
+                window.__zeshen = api;
+                // URL 參數：?stage=MEDUSA / POLYP 直接切換階段（方便測試與分享）
+                const qs = new URLSearchParams(location.search).get('stage');
+                if (qs && ['ADULT', 'MEDUSA', 'POLYP'].includes(qs.toUpperCase())) {
+                    api.setStage(qs.toUpperCase());
+                    setStage(qs.toUpperCase());
+                }
+            };
+
+            p.windowResized = function () {
+                const box = document.getElementById('p5-container');
+                p.resizeCanvas(box.clientWidth, box.clientHeight);
+                waterY = p.height * 0.14;
+                sedimentY = p.height * 0.76;
+                buildScenery(p.width, p.height);
+            };
+
+            p.mousePressed = function () {
+                const cv = p.canvas;
+                const r = cv.getBoundingClientRect();
+                const mx = p.mouseX, my = p.mouseY;
+                if (mx < 0 || my < 0 || mx > p.width || my > p.height) return;
+                if (p.mouseButton === p.RIGHT) { api.jetPulse(); return; }
+                if (S.stage === 'ADULT' && adult && Math.hypot(mx - adult.x, my - adult.y) < 70) {
+                    api.jetPulse(); return;
+                }
+                foods.push(new Food(mx, my, Math.random() < 0.45 ? 'PET' : 'BACT'));
+            };
+
+            p.draw = function () {
+                const w = p.width, h = p.height;
+                const glow = S.glow;
+
+                // --- 背景：沼澤水體 ---
+                const c = p.drawingContext;
+                const grad = c.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, '#04141a');
+                grad.addColorStop(0.5, '#062028');
+                grad.addColorStop(0.78, '#041417');
+                grad.addColorStop(1, '#020a0b');
+                c.fillStyle = grad;
+                c.fillRect(0, 0, w, h);
+
+                // 颱風濁化
+                if (S.storm > 0.01) {
+                    c.fillStyle = `rgba(90, 70, 40, ${S.storm * 0.22})`;
+                    c.fillRect(0, 0, w, h);
+                }
+
+                // 水面線
+                c.strokeStyle = 'rgba(52, 211, 153, 0.25)';
+                c.lineWidth = 1.5;
+                c.beginPath();
+                for (let x = 0; x <= w; x += 8) {
+                    const y = waterY + Math.sin(x * 0.02 + P.frameCount * 0.03) * (3 + S.storm * 12);
+                    x === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+                }
+                c.stroke();
+
+                // 沉積層
+                c.fillStyle = '#04100f';
+                c.beginPath();
+                c.moveTo(0, sedimentY);
+                for (let x = 0; x <= w; x += 12) {
+                    c.lineTo(x, sedimentY + Math.sin(x * 0.015) * 6);
+                }
+                c.lineTo(w, h); c.lineTo(0, h); c.closePath();
+                c.fill();
+                c.strokeStyle = 'rgba(52, 211, 153, 0.18)';
+                c.stroke();
+
+                // 玻璃陶瓷廢墟
+                for (const s of shards) {
+                    c.save();
+                    c.translate(s.x, s.y);
+                    c.rotate(s.rot);
+                    c.fillStyle = 'rgba(0, 243, 255, 0.07)';
+                    c.strokeStyle = 'rgba(0, 243, 255, 0.22)';
+                    c.lineWidth = 1;
+                    c.beginPath();
+                    c.moveTo(-s.w / 2, s.h / 2);
+                    c.lineTo(-s.w / 3, -s.h / 2);
+                    c.lineTo(s.w / 2.4, -s.h / 2.6);
+                    c.lineTo(s.w / 2, s.h / 2);
+                    c.closePath();
+                    c.fill(); c.stroke();
+                    c.restore();
+                }
+                // 塑膠凝膠化石層
+                for (const l of lumps) {
+                    const pu = 3 + Math.sin(P.frameCount * 0.03 + l.ph) * 2;
+                    c.fillStyle = 'rgba(16, 185, 129, 0.1)';
+                    c.beginPath(); c.ellipse(l.x, l.y, l.r, l.r * 0.5, 0, 0, 6.283); c.fill();
+                    c.fillStyle = `rgba(52, 211, 153, ${0.15 * glow})`;
+                    c.beginPath(); c.arc(l.x, l.y, pu * glow, 0, 6.283); c.fill();
+                }
+
+                // 懸浮微粒
+                while (particles.length < S.particleTarget) particles.push(new Mote(w, h, true));
+                while (particles.length > S.particleTarget) particles.pop();
+                for (const m of particles) { m.update(w, h, S.flow, S.storm); m.draw(); }
+
+                // 食物
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    const f = foods[i];
+                    f.update(S.flow, S.storm);
+                    f.life <= 0 ? foods.splice(i, 1) : f.draw(glow);
+                }
+
+                // 天敵
+                for (const fs of fish) fs.update(w, h, medusae, S.storm);
+
+                // 生物本體（依世代階段）
+                if (S.stage === 'ADULT') {
+                    adult.update(w, h, foods, S.storm);
+                    adult.draw(glow);
+                    polyp.update(foods, S.storm);
+                    polyp.draw(glow * 0.6);
+                } else if (S.stage === 'MEDUSA') {
+                    for (const m of medusae) m.update(w, h, foods, S.storm, fish);
+                    medusae = medusae.filter(m => m.alpha > 0 && m.y < h + 60);
+                    for (const m of medusae) m.draw(glow);
+                } else {
+                    polyp.update(foods, S.storm);
+                    polyp.draw(glow);
+                    for (const m of medusae) { m.update(w, h, foods, S.storm, fish); m.draw(glow * 0.7); }
+                    medusae = medusae.filter(m => m.alpha > 0);
+                }
+                for (const fs of fish) fs.draw();
+
+                // 颱風衰減
+                if (S.storm > 0) S.storm = Math.max(0, S.storm - 0.0016);
+
+                // HUD 文字
+                p.noStroke();
+                p.fill(148, 163, 184, 170);
+                p.textSize(11);
+                const stageName = { ADULT: '成體鱟相（澤蜃）', MEDUSA: '幼體水母相（澤水花）', POLYP: '螅肉體（固著）' }[S.stage];
+                p.text(`STAGE: ${stageName}   TIDE-FLOW: ${S.flow.toFixed(1)}x   CHEMO-GLOW: ${glow.toFixed(1)}x`, 14, 22);
+                if (S.storm > 0.02) {
+                    p.fill(192, 132, 252, 150 + 105 * Math.abs(Math.sin(P.frameCount * 0.2)));
+                    p.textSize(18);
+                    p.text('🌀 超強颱風湧浪警報：成體請潛入沉積層縫隙！', 14, 46);
+                }
+
+                updateTelemetry();
+            };
+        };
+
+        function updateTelemetry() {
+            if (P.frameCount % 12 !== 0) return;
+            const set = (id, v, danger) => {
+                const el = document.getElementById(id);
+                if (el) { el.innerText = v; el.classList.toggle('danger', !!danger); }
+            };
+            const stage = S.stage;
+            let hr;
+            if (stage === 'ADULT') hr = adult.buried ? 18 : 36;
+            else if (stage === 'MEDUSA') hr = medusae.length ? 64 + Math.round(Math.sin(P.frameCount * 0.05) * 8) : 0;
+            else hr = 12;
+            set('stat-pulse', hr + ' BPM');
+
+            const atp = stage === 'ADULT' ? (adult.buried ? 2.4 : 1.0 + S.eaten / 4000)
+                        : stage === 'MEDUSA' ? 0.6 + S.eaten / 6000 : 0.8;
+            set('stat-atp', atp.toFixed(2) + 'x');
+
+            const chitin = stage === 'ADULT' ? 100 : stage === 'MEDUSA' ? 0 : 15;
+            set('stat-chitin', chitin + ' %');
+            set('stat-eaten', Math.round(S.eaten) + ' μg');
+
+            if (stage === 'ADULT') {
+                const depth = adult.buried ? ((sedimentY - adult.y) / 40).toFixed(1) : ((sedimentY - adult.y) / 90).toFixed(1);
+                set('stat-depth', (adult.buried ? '沉積層 ' : '底層 ') + depth + ' m');
+            } else if (stage === 'MEDUSA') {
+                const m0 = medusae[0];
+                const depth = m0 ? ((sedimentY - m0.y) / 90).toFixed(1) : '-';
+                set('stat-depth', '水柱 ' + depth + ' m');
+            } else {
+                set('stat-depth', '底棲固著 0.0 m');
+            }
+
+            const pop = stage === 'ADULT' ? 1 : stage === 'MEDUSA' ? medusae.length : 1 + medusae.length;
+            const pressure = S.predation > 0 ? '高(' + S.predation + ')' : (stage !== 'ADULT' && fish.length ? '中' : '低');
+            set('stat-pop', pop + ' / ' + pressure, pressure.startsWith('高'));
+
+            const ind = document.getElementById('state-indicator');
+            if (ind) {
+                let txt = '狀態: ';
+                if (stage === 'ADULT') txt += adult.buried ? '沉積層縫隙潛伏 (Burrowed)' : '底棲爬行・趨化覓食 (Benthic Crawl)';
+                else if (stage === 'MEDUSA') txt += '澤水花群游・濾食中 (Medusa Bloom)';
+                else txt += '螅肉體固著・等待節生 (Polyp)';
+                if (S.storm > 0.05) txt += ' ｜ 🌀 颱風湧浪';
+                ind.innerText = txt;
+                ind.style.color = S.storm > 0.05 ? '#c084fc' : '#00f3ff';
+            }
+        }
+
+        // ---------- 對外 API ----------
+        const api = {
+            setParams(o) { Object.assign(S, o); },
+            setStage(s) {
+                S.stage = s;
+                if (s === 'MEDUSA' && medusae.length === 0) {
+                    for (let i = 0; i < 4; i++) medusae.push(new Medusa(P.random(80, P.width - 80), P.random(waterY + 80, sedimentY - 150)));
+                }
+                if (s === 'POLYP' && medusae.length === 0) medusae.push(new Medusa(polyp.x + 30, polyp.y - 90));
+            },
+            strobilation() {
+                if (!P) return;
+                const origin = S.stage === 'POLYP' ? polyp : { x: P.width * 0.5, y: sedimentY - 30 };
+                for (let i = 0; i < 6; i++) {
+                    medusae.push(new Medusa(origin.x + P.random(-40, 40), origin.y - P.random(20, 80)));
+                }
+                if (S.stage !== 'POLYP' && S.stage !== 'MEDUSA') S.stage = 'MEDUSA';
+                setStage(S.stage);
+            },
+            jetPulse() {
+                if (!P) return;
+                if (S.stage === 'MEDUSA') { medusae.forEach(m => m.pulse()); }
+                else if (medusae.length) { medusae.forEach(m => m.pulse()); }
+                else { medusae.push(new Medusa(adult.x, adult.y - 60)); S.stage = 'MEDUSA'; setStage('MEDUSA'); }
+            },
+            feed(type, n) {
+                if (!P) return;
+                for (let i = 0; i < n; i++) {
+                    foods.push(new Food(P.random(50, P.width - 50), P.random(waterY + 50, sedimentY - 20), type));
+                }
+            },
+            typhoon() { S.storm = 1.0; },
+            burrow() {
+                if (!adult) return false;
+                adult.buried = !adult.buried;
+                if (adult.buried) { S.stage = 'ADULT'; setStage('ADULT'); adult.y = sedimentY + 4; }
+                else adult.y = sedimentY - 20;
+                return adult.buried;
+            },
+            reset() {
+                S.eaten = 0; S.predation = 0; S.storm = 0;
+                adult.x = P.width * 0.42; adult.y = sedimentY - 24; adult.health = 100; adult.buried = false;
+                medusae = []; foods = [];
+                for (let i = 0; i < 5; i++) foods.push(new Food(P.random(60, P.width - 60), P.random(waterY + 60, sedimentY - 30), P.random() < 0.5 ? 'PET' : 'BACT'));
+            }
+        };
+
+        P = new p5(sketch);
+        updateParams();
+    })();
+    </script>
+
+    <!-- ======================================================== -->
+    <!-- Three.js 3D Viewer（載入 zeshen.glb）                    -->
+    <!-- ======================================================== -->
+    <script>
+        let scene, camera, renderer, controls, modelGroup, glbRoot;
+        let threeInitialized = false;
+
+        window.initThreeOnce = function () {
+            if (threeInitialized) return;
+            threeInitialized = true;
+
+            const container = document.getElementById('threejs-container');
+            const w = container.clientWidth || 800;
+            const h = container.clientHeight || 660;
+
+            if (typeof THREE === 'undefined') {
+                container.innerHTML = '<div style="color:var(--neon-cyan);padding:2rem;text-align:center;">Three.js 未能自 CDN 載入。請確認網路連線。</div>';
+                return;
+            }
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x030a0d);
+            scene.fog = new THREE.FogExp2(0x030a0d, 0.022);
+
+            camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 200);
+            camera.position.set(12, 9, 16);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.25;
+            container.appendChild(renderer.domElement);
+
+            if (THREE.OrbitControls) {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.06;
+            }
+
+            // 沼澤照明
+            scene.add(new THREE.AmbientLight(0x0c3035, 1.8));
+            const key = new THREE.DirectionalLight(0x66ffd9, 2.2);
+            key.position.set(6, 12, 8);
+            scene.add(key);
+            const rim = new THREE.PointLight(0xc084fc, 3.2, 40);
+            rim.position.set(-8, -4, -6);
+            scene.add(rim);
+            const med = new THREE.PointLight(0xe9d5ff, 2.5, 30);
+            med.position.set(8, 4, -6);
+            scene.add(med);
+
+            modelGroup = new THREE.Group();
+            scene.add(modelGroup);
+
+            // 載入 Blender 產出的 glTF 模型
+            if (THREE.GLTFLoader) {
+                const loader = new THREE.GLTFLoader();
+                loader.load('zeshen.glb',
+                    (gltf) => {
+                        glbRoot = gltf.scene;
+                        // 自動置中並縮放（排除地表/廢墟，讓生物佔滿視窗）
+                        const box = new THREE.Box3();
+                        const skip = /Sediment_Bed|GlassRuin|Plastiglomerate/;
+                        gltf.scene.traverse(o => {
+                            if (o.isMesh && !skip.test(o.name)) box.expandByObject(o);
+                        });
+                        if (box.isEmpty()) box.setFromObject(gltf.scene);
+                        const size = box.getSize(new THREE.Vector3());
+                        const center = box.getCenter(new THREE.Vector3());
+                        const scale = 13 / Math.max(size.x, size.y, size.z);
+                        gltf.scene.scale.setScalar(scale);
+                        gltf.scene.position.sub(center.multiplyScalar(scale));
+                        stylizeMaterials(gltf.scene);
+                        modelGroup.add(gltf.scene);
+                        window.__modelReady = true;
+                    },
+                    undefined,
+                    (err) => {
+                        console.warn('glTF 載入失敗，改用程序化備援模型', err);
+                        buildFallbackModel(modelGroup);
+                    });
+            } else {
+                buildFallbackModel(modelGroup);
+            }
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            animateThree();
+        };
+
+        // 備援：glTF 無法載入時的簡易程序化模型
+        function buildFallbackModel(group) {
+            const shellMat = new THREE.MeshPhysicalMaterial({
+                color: 0x0c3e3c, roughness: 0.25, metalness: 0.1,
+                transmission: 0.3, transparent: true, clearcoat: 0.7
+            });
+            const domeGeo = new THREE.SphereGeometry(2.4, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+            domeGeo.scale(1.15, 0.6, 1.05);
+            group.add(new THREE.Mesh(domeGeo, shellMat));
+
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
+            for (let i = 0; i < 7; i++) {
+                for (const side of [-1, 1]) {
+                    const a = Math.PI + ((i + 1) / 8) * Math.PI;
+                    const pore = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), glowMat);
+                    pore.position.set(Math.cos(a) * 2.6 * side, 0.15, Math.sin(a) * 2.3);
+                    group.add(pore);
+                }
+            }
+
+            const bellMat = new THREE.MeshPhysicalMaterial({
+                color: 0xc084fc, transmission: 0.55, transparent: true, roughness: 0.15,
+                emissive: 0x6d28d9, emissiveIntensity: 0.55, side: THREE.DoubleSide
+            });
+            const bell = new THREE.Mesh(new THREE.SphereGeometry(1.3, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), bellMat);
+            bell.position.set(5.5, 3.5, -3);
+            group.add(bell);
+            for (let i = 0; i < 12; i++) {
+                const curve = new THREE.CatmullRomCurve3([
+                    new THREE.Vector3(5.5 + Math.cos(i) * 1.2, 3.4, -3 + Math.sin(i) * 1.2),
+                    new THREE.Vector3(5.5 + Math.cos(i) * 1.4, 1.6, -3 + Math.sin(i) * 1.4),
+                    new THREE.Vector3(5.5 + Math.cos(i) * 1.2, -0.6, -3 + Math.sin(i) * 1.2)
+                ]);
+                group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.03, 5, false), bellMat));
+            }
+        }
+
+        // glTF 的 Transmission 材質在 WebGL 中易發白：依物件名稱重建 PBR 外觀
+        function stylizeMaterials(root) {
+            const glowGreen = () => new THREE.MeshBasicMaterial({ color: 0x34d399 });
+            const glowCyan = () => new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+            const chitin = () => new THREE.MeshPhysicalMaterial({
+                color: 0x0d4a46, roughness: 0.28, metalness: 0.15,
+                clearcoat: 0.7, clearcoatRoughness: 0.2,
+                emissive: 0x06302c, emissiveIntensity: 0.6
+            });
+            const bellMat = () => new THREE.MeshPhysicalMaterial({
+                color: 0xb57bed, roughness: 0.12, transparent: true, opacity: 0.72,
+                emissive: 0x5b21b6, emissiveIntensity: 0.45, side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const tentacleMat = () => new THREE.MeshPhysicalMaterial({
+                color: 0xd8b4fe, roughness: 0.2, transparent: true, opacity: 0.85,
+                emissive: 0x7c3aed, emissiveIntensity: 0.4
+            });
+            const frillMat = () => new THREE.MeshPhysicalMaterial({
+                color: 0x8b5cf6, roughness: 0.25, transparent: true, opacity: 0.65,
+                emissive: 0x4c1d95, emissiveIntensity: 0.35, side: THREE.DoubleSide
+            });
+            const sedimentMat = () => new THREE.MeshStandardMaterial({
+                color: 0x06110f, roughness: 1.0, metalness: 0.0
+            });
+            const glassMat = () => new THREE.MeshPhysicalMaterial({
+                color: 0x2dd4bf, roughness: 0.1, transparent: true, opacity: 0.28,
+                side: THREE.DoubleSide, depthWrite: false
+            });
+
+            root.traverse(o => {
+                if (!o.isMesh) return;
+                const n = o.name || '';
+                let mat = null;
+                if (/SymbiontPore|Adult_Eye|AbdGland/i.test(n)) mat = glowGreen();
+                else if (/Mirage_Seam|MirageSeam|Telson_Cord|Medusa_Radial|Rhopalium/i.test(n)) mat = glowCyan();
+                else if (/Medusa_Bell|Medusa_Manubrium/i.test(n)) mat = bellMat();
+                else if (/Medusa_Tentacle/i.test(n)) mat = tentacleMat();
+                else if (/Adult_Frill/i.test(n)) mat = frillMat();
+                else if (/Sediment_Bed|Plastiglomerate/i.test(n)) mat = sedimentMat();
+                else if (/GlassRuin/i.test(n)) mat = glassMat();
+                else mat = chitin();   // 背甲、腹節、劍尾、步足
+                if (mat) o.material = mat;
+            });
+        }
+
+        function setCameraView(view) {
+            if (!camera || !controls) return;
+            const map = {
+                dorsal:   [[0, 15, 4], [0, 0, 0]],
+                ventral:  [[0, -13, 3], [0, -1, 0]],
+                lateral:  [[16, 2, 3], [0, 0, 0]],
+                medusa:   [[9, 5.5, 4], [5.5, 3, -3]],
+                ecosystem:[[12, 9, 16], [1.5, 0.5, 0]]
+            };
+            const cfg = map[view] || map.ecosystem;
+            camera.position.set(cfg[0][0], cfg[0][1], cfg[0][2]);
+            controls.target.set(cfg[1][0], cfg[1][1], cfg[1][2]);
+            controls.update();
+        }
+
+        function toggleMaterialMode(mode) {
+            if (!modelGroup) return;
+            modelGroup.traverse(child => {
+                if (child.isMesh) child.material.wireframe = (mode === 'wireframe');
+            });
+        }
+
+        function animateThree() {
+            requestAnimationFrame(animateThree);
+            if (modelGroup) {
+                modelGroup.rotation.y = Math.sin(Date.now() * 0.0002) * 0.05;
+            }
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
